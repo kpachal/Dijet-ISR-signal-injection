@@ -3,6 +3,7 @@ import subprocess # So can use shell scripting in python
 import os, sys
 import datetime
 import glob
+import ROOT
 
 import configure_tests as config
 from start_pars_80fb import startParDict
@@ -15,7 +16,6 @@ tag = "{0}.{1}.{2}".format(now.year,now.month,now.day)
 # So that we don't get any run-time errors...
 directories = [config.location_final,config.new_config_dir,config.location_batchscripts,config.location_submissionscripts]
 for directory in directories:
-  print directory
   if not os.path.exists(directory):
     os.makedirs(directory) 
 
@@ -76,8 +76,8 @@ def generate_config(template_config, spectrum, function, window_width, signal_wi
   # but this is the one thing we are sharing configs for.
   test_name = "_".join([spectrum,function,"swiftWHW{0}".format(window_width)])
   if has_signal :
-    name_ext = "_".join(["mass{0}".format(signal_mass),"width{0}".format(signal_width),"nSigEvents{0}".format()])
-    test_name = test_name+name_ext
+    name_ext = "_".join(["mass{0}".format(signal_mass),"width{0}".format(signal_width),"nSigEvents{0}".format(number_signal)])
+    test_name = test_name+"_"+name_ext
 
   # Details for setting up job
   if has_signal :
@@ -89,6 +89,11 @@ def generate_config(template_config, spectrum, function, window_width, signal_wi
     input_name = input_options[0]
     input_hist = "background_toys"
   output_name = config.location_final+"/searchResult_{0}.root"+test_name
+
+  # Details for fitting
+  func_code = functionLoopDict[function]["functioncode"]
+  npar = functionLoopDict[function]["npar"]
+  startPars = startParDict[function][spectrum.split("_")[-1]]
 
   # Open modified config file (fout) for this test
   run_config = config.new_config_dir + '/SearchPhase_{0}.config'.format(test_name)
@@ -108,9 +113,19 @@ def generate_config(template_config, spectrum, function, window_width, signal_wi
         line = "dataHist\t{0}\n".format(input_hist)
       elif "outputFileName" in line :
         line = "outputFileName\t{0}\n".format(output_name)
-      # FIXME take fitting controls from flowchart code
       elif "functionCode" in line :
-        line = "functionCode\t{0}\n".format("FIXME")
+        line = "functionCode\t{0}\n".format(func_code)
+      elif "nParameters" in line :
+        line = "nParameters\t{0}\n".format(npar)
+      # Want to keep the right number of parameters
+      if "parameter1" in line :
+        line = ""
+        for par in sorted(startPars.keys()) :
+          line = line + "{0} {1}\n".format(par,startPars[par])
+      elif "parameter" in line :
+        continue
+      elif "doAlternateFunction" in line :
+        line = "doAlternateFunction     false\n"
       elif "swift_nBinsLeft" in line :
         line = "swift_nBinsLeft\t{0}\n".format(window_width)
       fout.write(line)    
@@ -193,7 +208,6 @@ for spectrum in spectra :
               continue
 
             n_signal = key.split("_")[-1].replace("nSignal","")
-            print "Testing signal number",n_signal
 
             # Make a config file.
             run_config, test_name = generate_config(template_config, spectrum, function, window_width, gaussian_width, mass, n_signal)
