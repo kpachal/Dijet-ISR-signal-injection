@@ -46,13 +46,16 @@ template_configs = {
 
 ## Paths ##
 
+# Where is the BayesianFramework package set up?
+stat_dir = os.path.join(thisLocation,"/../../BayesianFramework/")
+
 # Where should I make the new configs?
-new_config_dir = thisLocation+"/../configs/search_phase_generated/"
+new_config_dir = os.path.join(thisLocation,"/../configs/search_phase_generated/")
 
 # Locations for root files
-location_toySpectra = thisLocation + "/../toy_spectra/"
-location_signalInjectedSpectra = thisLocation + "/../signal_injected_spectra/"
-location_final = thisLocation + "/home/kpachal/project/kpachal/DijetISR/Resolved2017/SignalInjection/"
+location_toySpectra = os.path.join(thisLocation,"/../toy_spectra/")
+location_signalInjectedSpectra = os.path.join(thisLocation,"/../signal_injected_spectra/")
+location_final = "/home/kpachal/project/kpachal/DijetISR/Resolved2017/SignalInjection/"
 
 # Shouldn't need this usually, but if you are using a toy background file 
 # you didn't need yourself, the code needs to know what histogram to choose.

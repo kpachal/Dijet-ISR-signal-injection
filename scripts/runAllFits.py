@@ -42,21 +42,57 @@ location_batchscripts = config.location_batchscripts
 
 ## Define various functions ##
 
-def generate_config(template_config, spectrum, function, window_width, signal_width, signal_mass, number_signal) :
+def generate_config(template_config, spectrum, function, window_width, signal_width=-1, signal_mass=-1, number_signal=-1) :
+
+  has_signal = False
+  if signal_mass > 0 and signal_width > 0 and number_signal > 0 :
+    has_signal = True  
 
   # String for identifying this test.
   # Will be amended with specific histogram name (number of signal points) later,
   # but this is the one thing we are sharing configs for.
   test_name = "_".join(spectrum,function,"swiftWHW{0}".format(window_width))
+  if has_signal :
+    name_ext = "_".join("mass{0}".format(signal_mass),"width{0}".format(signal_width),"nSigEvents{0}".format())
+    test_name = test_name+name_ext
+
+  # Details for setting up job
+  if has_signal :
+    input_name = location_signalInjectedSpectra+"/signalInjectedBkg_{0}_mass{1}_width{2}.root".format(spectrum,mass,gaussian_width)
+    input_hist = "background_injected_nSignal{0}".format(int(number_signal))    
+  else :
+    # Pick any one of them, they are identical.
+    input_options = glob.glob(location_signalInjectedSpectra+"/*"+spectrum+"*")
+    input_name = input_options[0]
+    input_hist = "background_toys"
+  output_name = location_final+"/searchResult_{0}.root"+test_name
 
   # Open modified config file (fout) for this test
   run_config = config.new_config_dir + '/SearchPhase_{0}.config'.format(test_name)
-  print "Creating config",configName
-  #fout = open(configName, 'w')
+  print "Creating config",run_config
+  fout = open(run_config, 'w')
 
-  # read in search phase config file as fin and replace
+  # Read in search phase config file as fin and replace
   # relevant fields with user input specified in the config
-  #with open(config["searchPhaseConfig"], 'r') as fin:
+  with open(template_config, 'r') as fin:
+    fout.write("""##########################################\n
+                  # Automatic config for signal injection search\n
+                  ##########################################\n\n""")
+    for line in fin:
+      if "inputFileName" in line :
+        line = "inputFileName\t{0}\n".format(input_name)
+      if "dataHist" in line :
+        line = "dataHist\t{0}\n".format(input_hist)
+      if "outputFileName" in line :
+        line = "outputFileName\n{0}\n".format(output_name)
+      if "functionCode" in line :
+        line = "functionCode"
+      fout.write(line)    
+
+    fin.close()
+    fout.close()
+
+  return run_config, test_name
 
 def getFileKeys(file_name,dir="") :
   open_rootfile = ROOT.TFile.Open(file_name,"READ")
@@ -78,8 +114,8 @@ def batchSubmit(batchcommand,stringForNaming) :
   # open modified batch script (fbatchout) for writing
   batchtempname = '{0}/searchPhase_{1}.sh'.format(scriptArchive,stringForNaming)
   fbatchout = open(batchtempname,'w')
-  fbatchoutdata = fbatchindata.replace("YYY",headdir) # In batch script replace YYY for path for whole package
-  fbatchoutdata = fbatchoutdata.replace("ZZZ",batchcommand) # In batch script replace ZZZ for submit command
+  fbatchoutdata = fbatchindata.replace("YYY",config.stat_dir)
+  fbatchoutdata = fbatchoutdata.replace("ZZZ",batchcommand)
   fbatchoutdata = fbatchoutdata.replace("TIMEVAL","6:00:00")
   fbatchout.write(fbatchoutdata)
   modcommand = 'chmod 744 {0}'.format(batchtempname)
@@ -98,6 +134,9 @@ def batchSubmit(batchcommand,stringForNaming) :
 
 ## Run code ##
 
+# No need for uncertainties, so run with --noDE option
+run_command = "SearchPhase --config {0} --noDE"
+
 for spectrum in spectra :
 
   # Masses to check depends on spectrum.
@@ -111,7 +150,9 @@ for spectrum in spectra :
     for window_width in window_widths :
 
       # Baseline (no-signal) fit
-      run_config, test_name = generate_config(template_config, spectrum, function, window_width)      
+      run_config, test_name = generate_config(template_config, spectrum, function, window_width)
+
+      # Submit jobs
 
       for gaussian_width in gaussian_widths :
         for mass in gaussian_masses :
@@ -131,114 +172,10 @@ for spectrum in spectra :
             # Make a config file.
             run_config, test_name = generate_config(template_config, spectrum, function, window_width, gaussian_width, mass, n_signal)
 
-
+            # Submit jobs
 
 
 ### Old stuff
-
-#=====Where is the place to asetup?==
-headdir = (os.getcwd()).split("/run")[0]+"/BayesianFramework/" # directory for whole package
-
-    
-
-    # Loop over signals
-    for Model in config["Signals"].keys():
-
-      for Mass in sorted(config["Signals"][Model]):
-
-        # Signal file
-        signalFileName = config["signalFileNameTemplate"].format(Mass,Model)
-
-        # Histogram in signal file
-        signalHist=signalHistTemplate
-
-        outName = "ZPrime_mZ{0}_gS{1}".format(Mass,Model)
-        
-        # open modified config file (fout) for writing
-
-        configName = scriptArchive + '/setLimitsOneMassPoint_{0}_{1}.config'.format(spectrum,outName)
-        print "Creating config",configName
-        fout = open(configName, 'w')
-
-        # read in search phase config file as fin and replace
-        # relevant fields with user inout specified at top of this file.
-        with open(config["searchPhaseConfig"], 'r') as fin:
-
-          fout.write("##########################################\n# input/output for limit setting \n##########################################\n\n")
-          fout.write("dataFileName {0}\n\n".format(config["searchPhaseResults"]))
-          fout.write("dataHist  basicData\n\n")
-          fout.write("signalFileName {0}\n\n".format(signalFileName))
-          fout.write("nominalSignalHist {0}\n\n".format(signalHist))
-          outname = "outputFileName "+outDir+"setLimitsOneMassPoint_{0}_{1}.root\n\n".format(spectrum,outName)
-          fout.write(outname)
-          fout.write("plotDirectory {0}\n\n".format(outDir))
-          fout.write("plotNameExtension ZPrime\n\n")
-          fout.write("signame     ZPrime\n\n")
-          fout.write("##########################################\n")
-          
-          # Copy fitting info from search phase
-          foundFitting = False
-          for line in fin:
-            if "fitting" in line :
-              foundFitting = True
-            if foundFitting :
-              if "nPseudoExpFit" in line : continue
-              fout.write(line)
-              
-          # Add limit info
-          fout.write("##########################################\n# for limits\n##########################################\n\n")
-          fout.write("nSigmas     3.\n\n")
-          fout.write("doExpected    {0}\n\n".format( "true" if doExpected else "false"))
-          fout.write("nPEForExpected    {0}\n".format(nPEForExpected))
-          fout.write("PDFErrSize   {0}\n\n".format(PDFErrSize))
-          fout.write("doFitError   {0}\n".format(doFitError))
-          fout.write("nFitsInBkgError  {0}\n".format(nFitsInBkgError))
-          fout.write("doExtendedRange    {0}\n\n".format(doExtendedRange))
-          fout.write("doFitFunctionChoiceError  {0}\n".format(doFitFunctionChoiceError))
-          fout.write("nFitsInFcnError     {0}\n".format(nFitsInFcnError))
-          fout.write("nFitFSigmas   {0}\n\n".format(nFitFSigmas))
-          fout.write("doLumiError   {0}\n".format(doLumiError))
-          fout.write("luminosityErr   {0}\n\n".format(luminosityErr[spectrum]))
-          fout.write("doBeam   {0}\n".format(doBeam))
-          fout.write("BeamFile   {0}\n\n".format(BeamFile))
-          fout.write("doJES     {0}\n\n".format(doJES))
-          fout.write("doJER    {0}\n".format(doJER))
-          fout.write("JERUnc   {0}\n\n".format(JERUnc))
-          fout.write("doPhotonUnc  {0}\n".format(doPhotonUnc))
-          fout.write("photonUnc  {0}\n\n".format(photonUnc[spectrum]))
-          fout.write("doTrigEffUnc {0}\n".format(doTrigEffUnc[spectrum]))
-          fout.write("trigEffUnc {0}\n\n".format(trigEffUnc))
-          fout.write("doBTagSF  {0}\n".format(doBTagSF[spectrum]))
-          fout.write("bTagSFFileName  {0}\n".format(bTagSFFileName))
-          fout.write("bTagSFHistName  {0}\n\n".format(bTagSFHistName))
-          fout.write("##########################################\n# JES\n##########################################\n\n")
-          fout.write("useMatrices false\nuseTemplates true\n")
-          sigHistNom = signalHist
-          fout.write("nominalTemplateJES {0}\n\n".format(sigHistNom))
-          fout.write("nComponentsTemp {0}\n".format(nComponentsTemp))
-          fout.write("nameTemp1 {0}\n".format(sigHistNom.replace("Nominal","JET_GroupedNP_1")))
-          fout.write("nameTemp2 {0}\n".format(sigHistNom.replace("Nominal","JET_GroupedNP_2")))
-          fout.write("nameTemp3 {0}\n".format(sigHistNom.replace("Nominal","JET_GroupedNP_3")))
-          fout.write("nameTemp4 {0}\n\n".format(sigHistNom.replace("Nominal","JET_EtaIntercalibration_NonClosure")))
-          fout.write(JESString)
-
-        fin.close()
-        fout.close()
-
-        # Interpret mass
-        massString = Mass.strip("p")
-        if len(massString)<2 : massString = massString+"00"
-        else : massString = massString+"0"
-        submitMass = eval(massString)
-
-        # Setting command to be submitted (use tee to direc output to screen and to log file)
-        command = ""
-        if doPDFAccErr: # do PDF acceptance error
-          command = "setLimitsOneMassPoint --config {0} --mass {1} --PDFAccErr {2}".format(configName, submitMass,PDFErrSize)
-        else: # do not do PDF acceptance error
-          command = "setLimitsOneMassPoint --config {0} --mass {1} ".format(configName,submitMass) #2>/dev/null 1>output_{2}.txt
-        if importFitUncerts :
-          command = command + " --takeFitErrsFromSearch"
 
         if useBatch :
           if doExpected:
