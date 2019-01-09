@@ -54,7 +54,9 @@ new_config_dir = os.path.abspath(os.path.join(thisLocation,"../configs/search_ph
 # Locations for root files
 location_toySpectra = os.path.abspath(os.path.join(thisLocation,"../toy_spectra/"))
 location_signalInjectedSpectra = os.path.abspath(os.path.join(thisLocation,"../signal_injected_spectra/"))
-location_final = "/home/kpachal/project/kpachal/DijetISR/Resolved2017/SignalInjection/"
+#location_final = "/home/kpachal/project/kpachal/DijetISR/Resolved2017/SignalInjection/"
+location_final = os.path.abspath(os.path.join(thisLocation,"../fitted_results/"))
+
 
 # Shouldn't need this usually, but if you are using a toy background file 
 # you didn't need yourself, the code needs to know what histogram to choose.
@@ -69,4 +71,31 @@ template_script = "batch_scripts/batchScript_template_CEDAR.sh"
 # Location for batch submission scripts
 location_batchscripts = thisLocation+"/batch_scripts/"
 location_submissionscripts = thisLocation+"/submission_scripts/"
+
+## Special cases ##
+
+# Here we have optional manual overrides for special situations.
+
+# If you have a mass point which is really close to the start of your search,
+# it's going to need more than the usual 2.5 to 5 stat sigmas.
+# You can override with the values to use here.
+
+override_injection_sigmas = {
+  200 : {
+    "low_end" : 4.0,
+    "high_end" : 10.0
+  },
+  220 : {
+    "low_end" : 3.5,
+    "high_end" : 8.0
+  },
+  225 : {
+    "low_end" : 3.5,
+    "high_end" : 7.0
+  }
+}
+
+
+
+
 

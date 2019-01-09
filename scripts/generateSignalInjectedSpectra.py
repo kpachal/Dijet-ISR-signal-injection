@@ -67,13 +67,22 @@ for spectrum in spectra :
       injected_spectra = []
       vals = []
       # Pick the numbers of events where a p-value of 0.01 is likely to occur.
+      # For well-behaved points these values work well:
+      scale_lowEnd = 2.5
+      scale_highEnd = 5.0
+      # For points close to the low end, these might not be big enough
+      # Then the user can manually override them using the config.
+      if sig_mass in config.override_injection_sigmas.keys() :
+        scale_lowEnd = config.override_injection_sigmas[sig_mass]["low_end"]
+        scale_highEnd = config.override_injection_sigmas[sig_mass]["high_end"]
+
       centerbin = toy_background.FindBin(sig_mass)
       print "in bin",centerbin,"bin content is",toy_background.GetBinContent(centerbin),"and error is",toy_background.GetBinError(centerbin)
-      lowVal_centerbin = toy_background.GetBinError(centerbin)*1.5
-      highVal_centerbin = toy_background.GetBinError(centerbin)*3.0
+      lowVal_centerbin = toy_background.GetBinError(centerbin)*scale_lowEnd
+      highVal_centerbin = toy_background.GetBinError(centerbin)*scale_highEnd
       print "lowVal and highVal are",lowVal_centerbin,highVal_centerbin
-      for step in range(10) :
-        val = float(lowVal_centerbin) + float(step)/9.0 * (float(highVal_centerbin) - float(lowVal_centerbin))
+      for step in range(20) :
+        val = float(lowVal_centerbin) + float(step)/19.0 * (float(highVal_centerbin) - float(lowVal_centerbin))
         val = round(val)
         vals.append(val)
         this_sig = sig_normalised.Clone()
@@ -81,7 +90,7 @@ for spectrum in spectra :
         this_sig.SetDirectory(0)
         this_sig.Scale(val/sig_normalised.GetBinContent(centerbin))
         this_hist = toy_background.Clone()
-        this_hist.SetName("background_injected_nSignal{0}".format(int(val)))
+        this_hist.SetName("background_injected_nSignal{0}".format(int(this_sig.Integral())))
         this_hist.SetDirectory(0)
         this_hist.Add(this_sig)
         injected_spectra.append(this_hist)
