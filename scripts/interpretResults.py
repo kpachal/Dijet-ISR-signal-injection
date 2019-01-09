@@ -87,10 +87,12 @@ for spectrum in config.spectra :
             else :
               justAboveVal = nSignal
               print "Found 0.01 point with nSignal",nSignal
+              print "Just below is",justBelowVal
               break
 
           if not justAboveVal :
             print "Did not find a 0.01 point!"
+            print "Last nEvents was",justBelowVal,"with p-value",myDict[swift_window][mass][nSignal].bumpHunterPVal
 
           myDict[swift_window][mass]["pValueGraph"] = pVal_evolution
 
