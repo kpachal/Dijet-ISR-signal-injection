@@ -60,21 +60,31 @@ for spectrum in spectra :
           a = sig_normalised.GetBinLowEdge(ibin)
           b = sig_normalised.GetBinLowEdge(ibin+1)
           content = gaussian.Integral(a,b)
-          print "Filling bin",ibin,"w/ center",sig_normalised.GetBinCenter(ibin),"with integral from",a,"to",b,":", content
-
           sig_normalised.SetBinContent(ibin,content)
           sig_normalised.SetBinError(ibin,0)
       sig_normalised.Scale(1.0/sig_normalised.Integral())
 
       injected_spectra = []
+      vals = []
       # Pick the numbers of events where a p-value of 0.01 is likely to occur.
       centerbin = toy_background.FindBin(sig_mass)
-      lowVal_centerbin = toy_background.GetBinError(centerbin)*1.5
-      highVal_centerbin = toy_background.GetBinError(centerbin)*3.0
+      print "in bin",centerbin,"bin content is",toy_background.GetBinContent(centerbin),"and error is",toy_background.GetBinError(centerbin)
+      lowVal_centerbin = toy_background.GetBinError(centerbin)*2.0
+      highVal_centerbin = toy_background.GetBinError(centerbin)*5.0
       print "lowVal and highVal are",lowVal_centerbin,highVal_centerbin
       for step in range(10) :
         val = float(lowVal_centerbin) + float(step)/9.0 * (float(highVal_centerbin) - float(lowVal_centerbin))
-        print val
+        val = round(val)
+        vals.append(val)
+        this_sig = sig_normalised.Clone()
+        this_sig.SetName("sigToScale")
+        this_sig.SetDirectory(0)
+        this_sig.Scale(val)
+        this_hist = toy_background.Clone()
+        this_hist.SetName("background_injected_nSignal{0}".format(int(val)))
+        this_hist.SetDirectory(0)
+        this_hist.Add(this_sig)
+        injected_spectra.append(this_hist)
 
       # Create output file to save background, baseline signal template, and injected backgrounds.
       outFile_write = ROOT.TFile.Open(outFileName,"RECREATE")
