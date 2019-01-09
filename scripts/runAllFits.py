@@ -153,11 +153,11 @@ def batchSubmit(batchcommand,stringForNaming) :
   fbatchin.close()
 
   # open modified batch script (fbatchout) for writing
-  batchtempname = '{0}/searchPhase_{1}.sh'.format(scriptArchive,stringForNaming)
+  batchtempname = '{0}/searchPhase_{1}.sh'.format(config.location_batchscripts,stringForNaming)
   fbatchout = open(batchtempname,'w')
   fbatchoutdata = fbatchindata.replace("YYY",config.stat_dir)
   fbatchoutdata = fbatchoutdata.replace("ZZZ",batchcommand)
-  fbatchoutdata = fbatchoutdata.replace("TIMEVAL","6:00:00")
+  fbatchoutdata = fbatchoutdata.replace("TIMEVAL","2:00:00")
   fbatchout.write(fbatchoutdata)
   modcommand = 'chmod 744 {0}'.format(batchtempname)
   subprocess.call(modcommand, shell=True)
@@ -193,7 +193,14 @@ for spectrum in spectra :
       # Baseline (no-signal) fit
       run_config, test_name = generate_config(template_config, spectrum, function, window_width)
 
+      command = run_command.format(run_config)
+
       # Submit jobs
+      # Submit jobs
+      # if useBatch :
+      #   batchSubmit(command,test_name)
+      # else:
+      #   subprocess.call(command, shell=True)      
 
       for gaussian_width in gaussian_widths :
         for mass in gaussian_masses :
@@ -212,17 +219,12 @@ for spectrum in spectra :
             # Make a config file.
             run_config, test_name = generate_config(template_config, spectrum, function, window_width, gaussian_width, mass, n_signal)
 
+            command = run_command.format(run_config)
+
             # Submit jobs
-            # Fill in later....
-
-
-### Old stuff
-
-#        if useBatch :
-#          batchSubmit(command,"{0}_{1}".format(spectrum,outName))
-
-        # Perform setLimitsOneMassPoint locally
-#        else:
-#          subprocess.call(command, shell=True)
+            if useBatch :
+              batchSubmit(command,test_name)
+            else:
+              subprocess.call(command, shell=True)
 
 
