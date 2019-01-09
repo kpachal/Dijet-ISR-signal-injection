@@ -6,7 +6,41 @@ import datetime
 
 import configure_tests as config
 
-## Various functions ##
+## General ##
+
+now = datetime.datetime.now()
+tag = "{0}.{1}.{2}".format(now.year,now.month,now.day)
+
+# So that we don't get any run-time errors...
+directories = [config.location_final,config.new_config_dir,config.location_batchscripts,config.location_submissionscripts]
+for directory in directories:
+  if not os.path.exists(directory):
+    os.makedirs(directory) 
+
+# Need to run one job for each file.
+# Configs will vary by fit and spectrum,
+# as well as signal test.
+
+# We could use the same config for each signal
+# test and set the file name and histogram name
+# as run-time arguments, but better to have standalone
+# configs for cross checking.
+
+spectra = config.spectra
+functions = config.functions
+window_widths = config.swift_window_widths
+
+gaussian_widths = config.gaussian_widths
+
+# Configuring batch
+useBatch = config.use_batch
+templatescript = config.template_script
+# Options "slurm","torque","condor"
+batchType = config.batch_type
+# Where will batch scripts go?
+location_batchscripts = config.location_batchscripts
+
+## Define various functions ##
 
 def generate_config(template_config, spectrum, function, window_width, signal_width, signal_mass, number_signal) :
 
@@ -30,14 +64,6 @@ def getFileKeys(file_name,dir="") :
   keys_list = sorted([key.GetName() for key in ROOT.gDirectory.GetListOfKeys()])
   open_rootfile.Close()
   return keys_list
-
-def makeOutputDirs() :
-
-  # Make dirs
-  directories = [config.location_final,config.new_config_dir,config.location_batchscripts,config.location_submissionscripts]
-  for directory in directories:
-    if not os.path.exists(directory):
-      os.makedirs(directory)  
 
 def batchSubmit(batchcommand,stringForNaming) :
 
@@ -71,24 +97,6 @@ def batchSubmit(batchcommand,stringForNaming) :
   subprocess.call(submitcommand, shell=True)
 
 ## Run code ##
-
-# So that we don't get any run-time errors...
-makeOutputDirs()
-
-# Need to run one job for each file.
-# Configs will vary by fit and spectrum,
-# as well as signal test.
-
-# We could use the same config for each signal
-# test and set the file name and histogram name
-# as run-time arguments, but better to have standalone
-# configs for cross checking.
-
-spectra = config.spectra
-functions = config.functions
-window_widths = config.swift_window_widths
-
-gaussian_widths = config.gaussian_widths
 
 for spectrum in spectra :
 
@@ -128,41 +136,9 @@ for spectrum in spectra :
 
 ### Old stuff
 
-now = datetime.datetime.now()
-tag = "{0}.{1}.{2}".format(now.year,now.month,now.day)
-
-tag = tag+"_scalesOnly" # in case you want more
-
-
-
-# For running the search phase
-useBatch = config.use_batch
-templatescript = config.template_script
-# Options "slurm","torque","condor"
-batchType = config.batch_type
-# Where will batch scripts go?
-scriptArchive = "submission_scripts/{0}/".format(tag)
-
-# Test importing uncertainties from search phase?
-importFitUncerts = False
-
-# expected limits
-doExpected = True
-nPETotal = 100 # Total number of pseudo-experiments to run for expected limit bands. Was 100, should be ~200.
-nSplits = 5 # Number of divisions to split PEs into
-nPEForExpected = nPETotal/nSplits # Calculating how many PEs per division (split)
-
 #=====Where is the place to asetup?==
 headdir = (os.getcwd()).split("/run")[0]+"/BayesianFramework/" # directory for whole package
 
-
-## Function for handling batch submission
-
-
-
-# Run the submission
-
-if __name__=="__main__":
     
 
     # Loop over signals
