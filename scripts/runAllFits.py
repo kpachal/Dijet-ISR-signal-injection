@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 import subprocess # So can use shell scripting in python
 import os, sys
-import re
 import datetime
+import glob
 
 import configure_tests as config
+from start_pars_80fb import startParDict
 
 ## General ##
 
@@ -14,6 +15,7 @@ tag = "{0}.{1}.{2}".format(now.year,now.month,now.day)
 # So that we don't get any run-time errors...
 directories = [config.location_final,config.new_config_dir,config.location_batchscripts,config.location_submissionscripts]
 for directory in directories:
+  print directory
   if not os.path.exists(directory):
     os.makedirs(directory) 
 
@@ -40,6 +42,27 @@ batchType = config.batch_type
 # Where will batch scripts go?
 location_batchscripts = config.location_batchscripts
 
+# These are the function codes for fitting,
+# translating user config into run config
+functionLoopDict = {
+  "our5par" : {
+    "functioncode" : 7,
+    "npar" : 5
+  },
+  "our4par" : {
+    "functioncode" : 4,
+    "npar" : 4
+  },
+  "UA2" : {
+    "functioncode" : 1,
+    "npar" : 4
+  },
+  "our3par" : {
+    "functioncode" : 9,
+    "npar" : 3
+  }
+}
+
 ## Define various functions ##
 
 def generate_config(template_config, spectrum, function, window_width, signal_width=-1, signal_mass=-1, number_signal=-1) :
@@ -51,21 +74,21 @@ def generate_config(template_config, spectrum, function, window_width, signal_wi
   # String for identifying this test.
   # Will be amended with specific histogram name (number of signal points) later,
   # but this is the one thing we are sharing configs for.
-  test_name = "_".join(spectrum,function,"swiftWHW{0}".format(window_width))
+  test_name = "_".join([spectrum,function,"swiftWHW{0}".format(window_width)])
   if has_signal :
-    name_ext = "_".join("mass{0}".format(signal_mass),"width{0}".format(signal_width),"nSigEvents{0}".format())
+    name_ext = "_".join(["mass{0}".format(signal_mass),"width{0}".format(signal_width),"nSigEvents{0}".format()])
     test_name = test_name+name_ext
 
   # Details for setting up job
   if has_signal :
-    input_name = location_signalInjectedSpectra+"/signalInjectedBkg_{0}_mass{1}_width{2}.root".format(spectrum,mass,gaussian_width)
+    input_name = config.location_signalInjectedSpectra+"/signalInjectedBkg_{0}_mass{1}_width{2}.root".format(spectrum,mass,gaussian_width)
     input_hist = "background_injected_nSignal{0}".format(int(number_signal))    
   else :
     # Pick any one of them, they are identical.
-    input_options = glob.glob(location_signalInjectedSpectra+"/*"+spectrum+"*")
+    input_options = glob.glob(config.location_signalInjectedSpectra+"/*"+spectrum+"*")
     input_name = input_options[0]
     input_hist = "background_toys"
-  output_name = location_final+"/searchResult_{0}.root"+test_name
+  output_name = config.location_final+"/searchResult_{0}.root"+test_name
 
   # Open modified config file (fout) for this test
   run_config = config.new_config_dir + '/SearchPhase_{0}.config'.format(test_name)
@@ -81,12 +104,15 @@ def generate_config(template_config, spectrum, function, window_width, signal_wi
     for line in fin:
       if "inputFileName" in line :
         line = "inputFileName\t{0}\n".format(input_name)
-      if "dataHist" in line :
+      elif "dataHist" in line :
         line = "dataHist\t{0}\n".format(input_hist)
-      if "outputFileName" in line :
-        line = "outputFileName\n{0}\n".format(output_name)
-      if "functionCode" in line :
-        line = "functionCode"
+      elif "outputFileName" in line :
+        line = "outputFileName\t{0}\n".format(output_name)
+      # FIXME take fitting controls from flowchart code
+      elif "functionCode" in line :
+        line = "functionCode\t{0}\n".format("FIXME")
+      elif "swift_nBinsLeft" in line :
+        line = "swift_nBinsLeft\t{0}\n".format(window_width)
       fout.write(line)    
 
     fin.close()
@@ -158,7 +184,7 @@ for spectrum in spectra :
         for mass in gaussian_masses :
 
           # Now need one further loop over signal injected histograms in file.
-          infile = location_signalInjectedSpectra+"/signalInjectedBkg_{0}_mass{1}_width{2}.root".format(spectrum,mass,gaussian_width)
+          infile = config.location_signalInjectedSpectra+"/signalInjectedBkg_{0}_mass{1}_width{2}.root".format(spectrum,mass,gaussian_width)
           keys = getFileKeys(infile)
 
           # Begin loop. For each, make unique config.
@@ -173,30 +199,16 @@ for spectrum in spectra :
             run_config, test_name = generate_config(template_config, spectrum, function, window_width, gaussian_width, mass, n_signal)
 
             # Submit jobs
+            # Fill in later....
 
 
 ### Old stuff
 
-        if useBatch :
-          if doExpected:
-            for p in range(nSplits): batchSubmit(command,"{0}_{1}".format(spectrum,outName), seedOffset+p+1)
-          else: batchSubmit(command,"{0}_{1}".format(spectrum,outName))
+#        if useBatch :
+#          batchSubmit(command,"{0}_{1}".format(spectrum,outName))
 
         # Perform setLimitsOneMassPoint locally
-        else:
-          print command
-          if doExpected:
-            for p in range(nSplits):
-              try:
-                  #subprocess.call(command + " --seed " + str(seedOffset+p+1), shell=True)
-                  pass
-              except:
-                  pass
-          else:
-              try:
-                  #subprocess.call(command, shell=True)
-                  pass
-              except:
-                  pass
+#        else:
+#          subprocess.call(command, shell=True)
 
 

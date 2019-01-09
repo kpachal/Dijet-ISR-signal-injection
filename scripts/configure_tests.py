@@ -1,6 +1,5 @@
 import os
 thisLocation = os.path.dirname(os.path.abspath(__file__))
-statpackage_location = thisLocation+
 
 ## Settings ##
 
@@ -38,23 +37,23 @@ swift_window_widths = [19]
 # They should already contain fit ranges and correct SWIFT
 # settings so that only the function and window width need
 # to be changed.
-template_config_path = thisLocation+"/../configs/search_phase_templates/"
+template_config_path = os.path.abspath(os.path.join("../configs/search_phase_templates/"))
 template_configs = {
-  "single_inclusive" : thisLocation+"SearchPhase_dijetgamma_single_trigger_inclusive.config"
-  "combined_inclusive" : thisLocation+"configs/search_phase_templates/SearchPhase_dijetgamma_compound_trigger_inclusive.config"
+  "single_inclusive" : template_config_path+"/SearchPhase_dijetgamma_single_trigger_inclusive.config",
+  "combined_inclusive" : template_config_path+"/SearchPhase_dijetgamma_compound_trigger_inclusive.config"
 }
 
 ## Paths ##
 
 # Where is the BayesianFramework package set up?
-stat_dir = os.path.join(thisLocation,"/../../BayesianFramework/")
+stat_dir = os.path.join(thisLocation,"../../BayesianFramework/")
 
 # Where should I make the new configs?
-new_config_dir = os.path.join(thisLocation,"/../configs/search_phase_generated/")
+new_config_dir = os.path.abspath(os.path.join(thisLocation,"../configs/search_phase_generated/"))
 
 # Locations for root files
-location_toySpectra = os.path.join(thisLocation,"/../toy_spectra/")
-location_signalInjectedSpectra = os.path.join(thisLocation,"/../signal_injected_spectra/")
+location_toySpectra = os.path.abspath(os.path.join(thisLocation,"../toy_spectra/"))
+location_signalInjectedSpectra = os.path.abspath(os.path.join(thisLocation,"../signal_injected_spectra/"))
 location_final = "/home/kpachal/project/kpachal/DijetISR/Resolved2017/SignalInjection/"
 
 # Shouldn't need this usually, but if you are using a toy background file 
@@ -69,5 +68,5 @@ template_script = "batch_scripts/batchScript_template_CEDAR.sh"
 
 # Location for batch submission scripts
 location_batchscripts = thisLocation+"/batch_scripts/"
-location_submissonscripts = thisLocation+"/submission_scripts/"
+location_submissionscripts = thisLocation+"/submission_scripts/"
 
