@@ -88,7 +88,7 @@ def generate_config(template_config, spectrum, function, window_width, signal_wi
     input_options = glob.glob(config.location_signalInjectedSpectra+"/*"+spectrum+"*")
     input_name = input_options[0]
     input_hist = "background_toys"
-  output_name = config.location_final+"/searchResult_{0}.root"+test_name
+  output_name = config.location_final+"/searchResult_{0}.root".format(test_name)
 
   # Details for fitting
   func_code = functionLoopDict[function]["functioncode"]
@@ -196,11 +196,10 @@ for spectrum in spectra :
       command = run_command.format(run_config)
 
       # Submit jobs
-      # Submit jobs
-      # if useBatch :
-      #   batchSubmit(command,test_name)
-      # else:
-      #   subprocess.call(command, shell=True)      
+      if useBatch :
+        batchSubmit(command,test_name)
+      else:
+        subprocess.call(command, shell=True)      
 
       for gaussian_width in gaussian_widths :
         for mass in gaussian_masses :
