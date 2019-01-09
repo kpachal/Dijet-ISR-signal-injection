@@ -6,198 +6,38 @@ import datetime
 
 import configure_tests as config
 
-# Need to run one job for each file.
-# Configs will vary by fit and spectrum,
-# as well as signal test.
+## Various functions ##
 
-# We could use the same config for each signal
-# test and set the file name and histogram name
-# as run-time arguments, but better to have standalone
-# configs for cross checking.
+def generate_config(template_config, spectrum, function, window_width, signal_width, signal_mass, number_signal) :
 
-spectra = config.spectra
-functions = config.functions
-window_widths = config.swift_window_widths
+  # String for identifying this test.
+  # Will be amended with specific histogram name (number of signal points) later,
+  # but this is the one thing we are sharing configs for.
+  test_name = "_".join(spectrum,function,"swiftWHW{0}".format(window_width))
 
+  # Open modified config file (fout) for this test
+  run_config = config.new_config_dir + '/SearchPhase_{0}.config'.format(test_name)
+  print "Creating config",configName
+  #fout = open(configName, 'w')
 
-#---------------------------
-# Files and directories
+  # read in search phase config file as fin and replace
+  # relevant fields with user input specified in the config
+  #with open(config["searchPhaseConfig"], 'r') as fin:
 
-#=====Signal histogram template ======"
-inputs_dir = "/home/kpachal/project/kpachal/Datasets_DijetISR/"
-signalHistTemplate= "m_jj_Nominal"
+def getFileKeys(file_name,dir="") :
+  open_rootfile = ROOT.TFile.Open(file_name,"READ")
+  open_rootfile.cd(dir)
+  keys_list = sorted([key.GetName() for key in ROOT.gDirectory.GetListOfKeys()])
+  open_rootfile.Close()
+  return keys_list
 
-now = datetime.datetime.now()
-tag = "{0}.{1}.{2}".format(now.year,now.month,now.day)
+def makeOutputDirs() :
 
-tag = tag+"_scalesOnly" # in case you want more
-
-#=====Output file destination ======"
-outDir = "/home/kpachal/project/kpachal/Datasets_DijetISR/limit_results_zprime/{0}/".format(tag)
-
-#=====Run controls ==============="
-
-# For running the search phase
-useBatch = config.use_batch
-templatescript = config.template_script
-# Options "slurm","torque","condor"
-batchType = config.batch_type
-# Where will batch scripts go?
-scriptArchive = "submission_scripts/{0}/".format(tag)
-
-# Test importing uncertainties from search phase?
-importFitUncerts = False
-
-# expected limits
-doExpected = True
-nPETotal = 100 # Total number of pseudo-experiments to run for expected limit bands. Was 100, should be ~200.
-nSplits = 5 # Number of divisions to split PEs into
-nPEForExpected = nPETotal/nSplits # Calculating how many PEs per division (split)
-
-#=====Where is the place to asetup?==
-headdir = (os.getcwd()).split("/run")[0]+"/BayesianFramework/" # directory for whole package
-
-#=====Actual configurations==
-
-# Remove these here if you don't want to do all channels
-toRun = [
-#"compound_trigger_inclusive",
-#"compound_trigger_nbtag2",
-#"single_trigger_inclusive",
-"single_trigger_nbtag2"
-]
-
-spectrumConfig = {
-
-"compound_trigger_inclusive": {
-    "searchPhaseResults": inputs_dir + "/search_official_results/SearchPhase_dijetgamma_compound_trigger_inclusive.root",
-    "searchPhaseConfig": inputs_dir + "/search_official_results/SearchPhase_dijetgamma_compound_trigger_inclusive.config",
-    "lumi": "76p6",
-    "signalFileNameTemplate": inputs_dir + "limit_setting_sigsamples/Zprime_compound_trigger_inclusive_MGPy8EG_N30LO_A14N23LO_dmA_jja_Ph50_mR{0}_mD10_gS{1}_gD1.root",
-    "Signals":{"p2":["p35", "p45", "p55", "p75", "p95",]},
-},
-
-"compound_trigger_nbtag2": {
-    "searchPhaseResults": inputs_dir + "/search_official_results/SearchPhase_dijetgamma_compound_trigger_nbtag2.root",
-    "searchPhaseConfig": inputs_dir + "/search_official_results/SearchPhase_dijetgamma_compound_trigger_nbtag2.config",
-    "lumi": "76p6",
-    "signalFileNameTemplate": inputs_dir + "limit_setting_sigsamples/Zprime_compound_trigger_nbtag2_MGPy8EG_N30LO_A14N23LO_dmA_jja_Ph50_mR{0}_mD10_gS{1}_gD1.root",
-    "Signals":{"p2":["p35", "p45", "p55", "p75", "p95",]},
-},
-
-"single_trigger_inclusive": {
-    "searchPhaseResults": inputs_dir + "/search_official_results/SearchPhase_dijetgamma_single_trigger_inclusive.root",
-    "searchPhaseConfig": inputs_dir + "/search_official_results/SearchPhase_dijetgamma_single_trigger_inclusive.config",
-    "lumi": "79p8",
-    "signalFileNameTemplate": inputs_dir + "limit_setting_sigsamples/Zprime_single_trigger_inclusive_MGPy8EG_N30LO_A14N23LO_dmA_jja_Ph100_mR{0}_mD10_gS{1}_gD1.root",
-    "Signals": {"p1":["p25","p35","p45","p55"],
-                "p2":["p25","p35","p45","p55","p75"],
-                "p3":["p25","p3", "p35", "p4", "p45", "p5", "p55", "p75", "p95"]},
-},
-
-"single_trigger_nbtag2": {
-    "searchPhaseResults": inputs_dir + "/search_official_results/SearchPhase_dijetgamma_single_trigger_nbtag2.root",
-    "searchPhaseConfig": inputs_dir + "/search_official_results/SearchPhase_dijetgamma_single_trigger_nbtag2.config",
-    "lumi": "79p8",
-    "signalFileNameTemplate": inputs_dir + "limit_setting_sigsamples/Zprime_single_trigger_nbtag2_MGPy8EG_N30LO_A14N23LO_dmA_jja_Ph100_mR{0}_mD10_gS{1}_gD1.root",
-    "Signals": {"p1":["p25","p35","p45","p55"],
-                "p2":["p25","p35","p45","p55","p75"],
-                "p3":["p25","p3", "p35", "p4", "p45", "p5", "p55", "p75", "p95"]},
-
-}
-} # End spectrumConfig
-
-##---------------------------
-# Uncertainty quantities
-
-#----PDF Error
-doPDFAccErr = True # Set to True to use PDF Acceptance Error
-#doPDFAccErr = False # Set to True to use PDF Acceptance Error
-PDFErrSize = 0.01
-
-#---Fit function Error
-#doFitError="true"
-doFitError="false"
-nFitsInBkgError=100
-doExtendedRange="false"
-
-#----Fit Function choice error
-#doFitFunctionChoiceError="true"
-doFitFunctionChoiceError="false"
-nFitsInFcnError=100
-nFitFSigmas=1
-
-#----Lumi Error
-doLumiError="true"
-#doLumiError="false"
-luminosityErr = {
-  "compound_trigger_inclusive" : 0.023,
-  "compound_trigger_nbtag2" : 0.023,
-  "single_trigger_inclusive" : 0.020,
-  "single_trigger_nbtag2" : 0.020
-}
-
-#---Beam systematics
-doBeam="false"
-BeamFile="./inputs/BeamUncertainty/AbsoluteBEAMUncertaintiesForPlotting.root"
-
-#--JES
-#doJES="true"
-doJES="false"
-useMatrices="false"
-useTemplates="true"
-nComponentsTemp=4
-components = ["JET_GroupedNP_1","JET_GroupedNP_2","JET_GroupedNP_3","JET_EtaIntercalibration_NonClosure"]
-
-JESString = '''
-##--------------------------------------##
-# nJES is number of extensions +1
-nJES      7
-extension1        __3down
-extension2        __2down
-extension3        __1down
-extension4        __1up
-extension5       __2up
-extension6       __3up
-'''
-
-#--JER
-doJER="true"
-#doJER="false"
-JERUnc=0.03
-
-#--photon uncertainties
-doPhotonUnc="true"
-#doPhotonUnc="false"
-photonUnc = {
-  "compound_trigger_inclusive" : 0.014,
-  "compound_trigger_nbtag2" : 0.014,
-  "single_trigger_inclusive" : 0.020,
-  "single_trigger_nbtag2" : 0.020
-}
-
-#--trigger efficiency
-doTrigEffUnc = {
-  "compound_trigger_inclusive" : "true",
-  "compound_trigger_nbtag2" : "true",
-  "single_trigger_inclusive" : "false",
-  "single_trigger_nbtag2" : "false"
-}
-trigEffUnc = 0.030
-
-#--b-tagging SF uncertainties
-doBTagSF = {
-  "compound_trigger_inclusive" : "false",
-  "compound_trigger_nbtag2" : "true",
-  "single_trigger_inclusive" : "false",
-  "single_trigger_nbtag2" : "true"
-}
-bTagSFFileName=headdir+"source/Bayesian/share/bSF_uncertainty.root"
-bTagSFHistName="bSF_uncertainty_relative"
-
-#----------------------------------
-# ***** End of User specifies *****
-#----------------------------------
+  # Make dirs
+  directories = [config.location_final,config.new_config_dir,config.location_batchscripts,config.location_submissionscripts]
+  for directory in directories:
+    if not os.path.exists(directory):
+      os.makedirs(directory)  
 
 def batchSubmit(batchcommand,stringForNaming) :
 
@@ -230,26 +70,100 @@ def batchSubmit(batchcommand,stringForNaming) :
   print submitcommand
   subprocess.call(submitcommand, shell=True)
 
+## Run code ##
 
-#-------------------------------------
-# Performing Step 2: Limit setting for each model & mass using setLimitsOneMassPoint.cxx
-#-------------------------------------
+# So that we don't get any run-time errors...
+makeOutputDirs()
 
-statspath = os.getcwd() # path used in outputFileName in config
+# Need to run one job for each file.
+# Configs will vary by fit and spectrum,
+# as well as signal test.
+
+# We could use the same config for each signal
+# test and set the file name and histogram name
+# as run-time arguments, but better to have standalone
+# configs for cross checking.
+
+spectra = config.spectra
+functions = config.functions
+window_widths = config.swift_window_widths
+
+gaussian_widths = config.gaussian_widths
+
+for spectrum in spectra :
+
+  # Masses to check depends on spectrum.
+  gaussian_masses = config.mass_points[spectrum]
+
+  # Search phase config to use as template
+  template_config = config.template_configs[spectrum]  
+
+  # Now go through each option we want to test.
+  for function in functions :
+    for window_width in window_widths :
+
+      # Baseline (no-signal) fit
+      run_config, test_name = generate_config(template_config, spectrum, function, window_width)      
+
+      for gaussian_width in gaussian_widths :
+        for mass in gaussian_masses :
+
+          # Now need one further loop over signal injected histograms in file.
+          infile = location_signalInjectedSpectra+"/signalInjectedBkg_{0}_mass{1}_width{2}.root".format(spectrum,mass,gaussian_width)
+          keys = getFileKeys(infile)
+
+          # Begin loop. For each, make unique config.
+          for key in keys :
+            if not "background_injected" in key :
+              continue
+
+            n_signal = key.split("_")[-1].replace("nSignal","")
+            print "Testing signal number",n_signal
+
+            # Make a config file.
+            run_config, test_name = generate_config(template_config, spectrum, function, window_width, gaussian_width, mass, n_signal)
+
+
+
+
+### Old stuff
+
+now = datetime.datetime.now()
+tag = "{0}.{1}.{2}".format(now.year,now.month,now.day)
+
+tag = tag+"_scalesOnly" # in case you want more
+
+
+
+# For running the search phase
+useBatch = config.use_batch
+templatescript = config.template_script
+# Options "slurm","torque","condor"
+batchType = config.batch_type
+# Where will batch scripts go?
+scriptArchive = "submission_scripts/{0}/".format(tag)
+
+# Test importing uncertainties from search phase?
+importFitUncerts = False
+
+# expected limits
+doExpected = True
+nPETotal = 100 # Total number of pseudo-experiments to run for expected limit bands. Was 100, should be ~200.
+nSplits = 5 # Number of divisions to split PEs into
+nPEForExpected = nPETotal/nSplits # Calculating how many PEs per division (split)
+
+#=====Where is the place to asetup?==
+headdir = (os.getcwd()).split("/run")[0]+"/BayesianFramework/" # directory for whole package
+
+
+## Function for handling batch submission
+
+
+
+# Run the submission
 
 if __name__=="__main__":
-
-  for spectrum, config in spectrumConfig.iteritems():
-  
-    # Only do the specified ones
-    if not spectrum in toRun :
-      continue
     
-    # Make dirs
-    directories = [outDir,scriptArchive]
-    for directory in directories:
-      if not os.path.exists(directory):
-        os.makedirs(directory)
 
     # Loop over signals
     for Model in config["Signals"].keys():

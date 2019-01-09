@@ -1,4 +1,6 @@
 import os
+thisLocation = os.path.dirname(os.path.abspath(__file__))
+statpackage_location = thisLocation+
 
 ## Settings ##
 
@@ -23,16 +25,31 @@ gaussian_widths = [7, 10, 15]
 
 ## Fit related settings
 
-# These are the functions to test
+# These are the functions to test.
+# Options: "our3par","our4par", "our5par","UA2"
 functions = ["our5par"]
 
 # These are the SWIFT window sizes to test,
 # specified as number of bins in half-width
 swift_window_widths = [19]
 
+# These are the fitting config files to use as templates
+# for each spectrum.
+# They should already contain fit ranges and correct SWIFT
+# settings so that only the function and window width need
+# to be changed.
+template_config_path = thisLocation+"/../configs/search_phase_templates/"
+template_configs = {
+  "single_inclusive" : thisLocation+"SearchPhase_dijetgamma_single_trigger_inclusive.config"
+  "combined_inclusive" : thisLocation+"configs/search_phase_templates/SearchPhase_dijetgamma_compound_trigger_inclusive.config"
+}
+
 ## Paths ##
 
-thisLocation = os.path.dirname(os.path.abspath(__file__))
+# Where should I make the new configs?
+new_config_dir = thisLocation+"/../configs/search_phase_generated/"
+
+# Locations for root files
 location_toySpectra = thisLocation + "/../toy_spectra/"
 location_signalInjectedSpectra = thisLocation + "/../signal_injected_spectra/"
 location_final = thisLocation + "/home/kpachal/project/kpachal/DijetISR/Resolved2017/SignalInjection/"
@@ -46,4 +63,8 @@ bkg_hist_name = "basicBkgFrom4ParamFit_fluctuated"
 use_batch = True
 batch_type = "slurm"
 template_script = "batch_scripts/batchScript_template_CEDAR.sh"
+
+# Location for batch submission scripts
+location_batchscripts = thisLocation+"/batch_scripts/"
+location_submissonscripts = thisLocation+"/submission_scripts/"
 
