@@ -21,19 +21,21 @@ mass_points = {
 # Expressed as a percentage.
 gaussian_widths = [7, 10, 15]
 
+## Fit related settings
+
 # These are the functions to test
 functions = ["our5par"]
 
 # These are the SWIFT window sizes to test,
 # specified as number of bins in half-width
-swift_window_withs = [19]
+swift_window_widths = [19]
 
 ## Paths ##
 
 thisLocation = os.path.dirname(os.path.abspath(__file__))
 location_toySpectra = thisLocation + "/../toy_spectra/"
 location_signalInjectedSpectra = thisLocation + "/../signal_injected_spectra/"
-location_final = thisLocation + "/../fit_results/"
+location_final = thisLocation + "/home/kpachal/project/kpachal/DijetISR/Resolved2017/SignalInjection/"
 
 # Shouldn't need this usually, but if you are using a toy background file 
 # you didn't need yourself, the code needs to know what histogram to choose.
@@ -41,6 +43,7 @@ location_final = thisLocation + "/../fit_results/"
 bkg_hist_name = "basicBkgFrom4ParamFit_fluctuated"
 
 ## Batch configuring ##
-
-batch_type = "Slurm"
+use_batch = True
+batch_type = "slurm"
+template_script = "batch_scripts/batchScript_template_CEDAR.sh"
 
