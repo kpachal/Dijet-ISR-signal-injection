@@ -1,8 +1,89 @@
 import ROOT
 import sys,os
+import glob
 
 import configure_tests as config
 
-# Find files with toy spectra. 
-# There should be no ambiguity.
-toyFiles = config.
+# Get spectra to run on
+spectra = config.spectra
+
+# Get ID number of toy we want to use for background
+toyID = config.background_toy_ID
+
+# We need to make signal injected toys for each of them.
+for spectrum in spectra :
+
+  print "Beginning toy generation for spectrum",spectrum
+
+  # Find files with toy spectra. 
+  # There should be no ambiguity.
+  toyFilesDir = config.location_toySpectra
+  toyFiles = glob.glob(toyFilesDir+"/*"+spectrum+"*toy{0}".format(toyID)+"*.root")
+  if len(toyFiles) == 1 :
+    toyFile = toyFiles[0]
+    print "Using file",toyFile,"for toy background distribution."
+  else :
+    print "Found wrong number of toy files!"
+    print toyFiles
+    exit(1)
+
+  # Get spectrum of toys for background from the file.
+  toyFile_read = ROOT.TFile.Open(toyFile,"READ")
+  toy_histName = config.bkg_hist_name if config.bkg_hist_name else "background_toys"
+  toy_background = toyFile_read.Get(toy_histName)
+  toy_background.SetDirectory(0)
+  toyFile_read.Close()
+ 
+  # Make several tests at different normalisations for each signal mass and width.
+  for sig_mass in config.mass_points[spectrum] :
+    for sig_width in config.gaussian_widths :
+
+      print "Making spectra for mass",sig_mass,"and width",sig_width,"%"
+      # File to put distribution in
+      outFileName = config.location_signalInjectedSpectra + "/signalInjectedBkg_{0}_mass{1}_width{2}.root".format(spectrum,sig_mass,sig_width)
+
+      # Make the Gaussian as a TF1
+      onesigma = float(sig_width)/100.0 * sig_mass
+      gaussian = ROOT.TF1("signal","TMath::Gaus(x,{0},{1})".format(sig_mass,onesigma),sig_mass-3.0*onesigma, sig_mass+3.0*onesigma)
+
+      # Make a simple Gaussian histogram normalised to 1 event
+      # and matching analysis binning.
+      sig_normalised = toy_background.Clone()
+      sig_normalised.SetName("signal_normalised")
+      sig_normalised.SetDirectory(0)
+      sig_normalised.Reset()
+      for ibin in range(1,sig_normalised.GetNbinsX()+1) :
+        if (sig_normalised.GetBinLowEdge(ibin) >= sig_mass+3.0*onesigma) or (sig_normalised.GetBinLowEdge(ibin+1) <= sig_mass-3.0*onesigma) :
+          sig_normalised.SetBinContent(ibin,0)
+          sig_normalised.SetBinError(ibin,0)
+        else :
+          a = sig_normalised.GetBinLowEdge(ibin)
+          b = sig_normalised.GetBinLowEdge(ibin+1)
+          content = gaussian.Integral(a,b)
+          print "Filling bin",ibin,"w/ center",sig_normalised.GetBinCenter(ibin),"with integral from",a,"to",b,":", content
+
+          sig_normalised.SetBinContent(ibin,content)
+          sig_normalised.SetBinError(ibin,0)
+      sig_normalised.Scale(1.0/sig_normalised.Integral())
+
+      injected_spectra = []
+      # Pick the numbers of events where a p-value of 0.01 is likely to occur.
+      centerbin = toy_background.FindBin(sig_mass)
+      lowVal_centerbin = toy_background.GetBinError(centerbin)*1.5
+      highVal_centerbin = toy_background.GetBinError(centerbin)*3.0
+      print "lowVal and highVal are",lowVal_centerbin,highVal_centerbin
+      for step in range(10) :
+        val = float(lowVal_centerbin) + float(step)/9.0 * (float(highVal_centerbin) - float(lowVal_centerbin))
+        print val
+
+      # Create output file to save background, baseline signal template, and injected backgrounds.
+      outFile_write = ROOT.TFile.Open(outFileName,"RECREATE")
+      outFile_write.cd()
+      toy_background.Write("background_toys")
+      sig_normalised.Write()
+      for injected_spectrum in injected_spectra :
+        injected_spectrum.Write()
+      outFile_write.Close()
+
+
+

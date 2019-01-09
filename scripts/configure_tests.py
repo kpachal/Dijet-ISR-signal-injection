@@ -4,7 +4,7 @@ import os
 
 # These are the spectra to test. The names map to the 
 # input files as well as toy and signal injected spectra.
-spectra = ["single_inclusive","combined_inclusive"]
+spectra = ["single_inclusive"]#,"combined_inclusive"]
 
 # In case you generated several sets of toys for the 
 # background spectrum, use this to specify which one you 
@@ -31,9 +31,14 @@ swift_window_withs = [19]
 ## Paths ##
 
 thisLocation = os.path.dirname(os.path.abspath(__file__))
-location_toySpectra = thisLocation + "../toy_spectra/"
-location_signalInjectedSpectra = thisLocation + "../signal_injected_spectra/"
-location_final = thisLocation + "../fit_results/"
+location_toySpectra = thisLocation + "/../toy_spectra/"
+location_signalInjectedSpectra = thisLocation + "/../signal_injected_spectra/"
+location_final = thisLocation + "/../fit_results/"
+
+# Shouldn't need this usually, but if you are using a toy background file 
+# you didn't need yourself, the code needs to know what histogram to choose.
+# Otherwise just set it to an empty string.
+bkg_hist_name = "basicBkgFrom4ParamFit_fluctuated"
 
 ## Batch configuring ##
 
